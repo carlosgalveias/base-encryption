@@ -1,0 +1,25 @@
+{
+  "name": "base-encryption",
+  "version": "2.0.0",
+  "description": "A npm module with encryption/decryption data with support both for node and for browser",
+  "main": "index.js",
+  "scripts": {
+    "test": "node ./node_modules/mocha/bin/mocha test --timeout 30000 --recursive --exit",
+    "build": "webpack"
+  },
+  "author": "Carlos Galveias",
+  "license": "Apache 2.0",
+  "dependencies": {
+    "buffer": "^6.0.3",
+    "crypto-browserify": "^3.12.1",
+    "crypto-js": "^4.2.0",
+    "stream-browserify": "^3.0.0"
+  },
+  "devDependencies": {
+    "javascript-obfuscator": "^4.1.1",
+    "mocha": "^11.1.0",
+    "webpack": "^5.97.1",
+    "webpack-cli": "^6.0.1",
+    "webpack-obfuscator": "^3.5.1"
+  }
+}
