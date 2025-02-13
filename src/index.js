@@ -19,14 +19,14 @@ function objToString(obj) {
   return isObject(obj) ? JSON.stringify(obj) : obj;
 }
 
-const oneWayEncryption = function(data) {
-  if (data) return CryptoJS.SHA256(data).toString();
+const oneWayEncryption = function(data, sha) {
+  if (data) return sha ? CryptoJS.SHA256(data).toString() : CryptoJS.MD5(data).toString();
   return data;
 };
 
-const oneWayComparation = function(cypher, compare) {
+const oneWayComparation = function(cypher, compare, sha) {
   if (cypher && compare) {
-    return cypher === CryptoJS.SHA256(compare).toString();
+    return cypher === (sha ? CryptoJS.SHA256(compare).toString() : CryptoJS.MD5(compare).toString());
   }
   return cypher;
 };

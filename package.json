@@ -1,6 +1,6 @@
 {
-  "name": "base-encryption",
-  "version": "2.0.0",
+  "name": "common-encryption",
+  "version": "2.0.2",
   "description": "A npm module with encryption/decryption data with support both for node and for browser",
   "main": "index.js",
   "scripts": {
@@ -8,7 +8,11 @@
     "build": "webpack"
   },
   "author": "Carlos Galveias",
-  "license": "Apache 2.0",
+  "license": "Apache-2.0",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/carlosgalveias/base-encryption"
+  },
   "dependencies": {
     "buffer": "^6.0.3",
     "crypto-browserify": "^3.12.1",
