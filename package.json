@@ -1,6 +1,6 @@
 {
   "name": "common-encryption",
-  "version": "2.0.2",
+  "version": "2.0.3",
   "description": "A npm module with encryption/decryption data with support both for node and for browser",
   "main": "index.js",
   "scripts": {
@@ -25,5 +25,8 @@
     "webpack": "^5.97.1",
     "webpack-cli": "^6.0.1",
     "webpack-obfuscator": "^3.5.1"
+  },
+  "overrides": {
+    "pbkdf2": "^3.1.3"
   }
 }
