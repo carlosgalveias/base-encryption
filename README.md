@@ -57,7 +57,7 @@ A unified encryption library for Node.js and browser environments, providing sim
 ## Installation
 
 ```bash
-npm install base-encryption
+npm install common-encryption
 ```
 
 **Requirements:**
@@ -92,7 +92,7 @@ const encrypted = await commonEncryption.twoWayEncrypt('secret', 'password');
 
 ### Step 1: Update Package
 ```bash
-npm install base-encryption@^3.0.0
+npm install common-encryption@^3.0.0
 ```
 
 ### Step 2: Update All Function Calls
@@ -120,8 +120,8 @@ v3.0 cannot decrypt v2.x encrypted data. You must:
 
 ```javascript
 // One-time migration script
-import v2 from 'base-encryption@2.0.5';
-import commonEncryption from 'base-encryption@3.0.0';
+import v2 from 'common-encryption@2.0.5';
+import commonEncryption from 'common-encryption@3.0.0';
 
 async function migrateData(oldEncryptedData, password) {
   // Decrypt with v2
@@ -165,22 +165,22 @@ node --version  # Should be v18.0.0 or higher
 
 **Node.js (ES Modules):**
 ```javascript
-import commonEncryption from 'base-encryption';
+import commonEncryption from 'common-encryption';
 ```
 
 **Node.js (CommonJS):**
 ```javascript
-const commonEncryption = require('base-encryption');
+const commonEncryption = require('common-encryption');
 ```
 
 **Browser (ES6 modules):**
 ```javascript
-import commonEncryption from './node_modules/base-encryption/index.js';
+import commonEncryption from './node_modules/common-encryption/index.js';
 ```
 
 **Browser (script tag):**
 ```html
-<script src="node_modules/base-encryption/index.js"></script>
+<script src="node_modules/common-encryption/index.js"></script>
 <script>
   // Library is available as commonEncryption
 </script>
