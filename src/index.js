@@ -1,14 +1,19 @@
-import * as CryptoJS from "crypto-js";
-import AES from "crypto-js/aes";
+import {
+  generateRandomBytes,
+  arrayBufferToHex,
+  hexToArrayBuffer,
+  stringToArrayBuffer,
+  arrayBufferToString,
+  deriveKey,
+  hashData,
+  getCrypto
+} from './crypto-utils.js';
 
-const keySize = 256;
-const ivSize = 128;
-const iterations = 100;
-const length = 32;
-const ivSizeDivider = 8;
-const SALT_SIZE = ivSize / ivSizeDivider;
-const IV_SIZE = ivSize / ivSizeDivider;
-const KEY_SIZE = keySize / length;
+// Modern security constants
+const PBKDF2_ITERATIONS = 600000; // Updated from 100 to modern standard
+const SALT_SIZE = 16; // bytes
+const IV_SIZE = 12;   // bytes for AES-GCM (not 16 for CBC)
+const KEY_SIZE = 256; // bits
 
 // HELPERS
 function isObject(obj) {
@@ -19,64 +24,154 @@ function objToString(obj) {
   return isObject(obj) ? JSON.stringify(obj) : obj;
 }
 
-const oneWayEncryption = function(data, sha) {
-  if (data) return sha ? CryptoJS.SHA256(data).toString() : CryptoJS.MD5(data).toString();
-  return data;
-};
-
-const oneWayComparation = function(cypher, compare, sha) {
-  if (cypher && compare) {
-    return cypher === (sha ? CryptoJS.SHA256(compare).toString() : CryptoJS.MD5(compare).toString());
+/**
+ * One-way encryption using SHA-256 or MD5 hash
+ * @param {string} data - Data to hash
+ * @param {boolean} sha - Use SHA-256 if true, MD5 if false (default: true)
+ * @returns {Promise<string|undefined>} Hex-encoded hash or undefined if no data
+ */
+async function oneWayEncrypt(data, sha = true) {
+  if (!data) return undefined;
+  
+  try {
+    const algorithm = sha ? 'SHA-256' : 'MD5';
+    const hash = await hashData(data, algorithm);
+    return hash;
+  } catch (error) {
+    console.error('One-way encryption error:', error.message);
+    return undefined;
   }
-  return cypher;
-};
+}
 
-const twoWayEncryption = function(data, passphrase) {
+/**
+ * Compare plaintext with a hashed value
+ * @param {string} cypher - Hashed value to compare against
+ * @param {string} compare - Plaintext to hash and compare
+ * @param {boolean} sha - Use SHA-256 if true, MD5 if false (default: true)
+ * @returns {Promise<boolean|string>} True if match, false if no match, or cypher if invalid input
+ */
+async function oneWayCompare(cypher, compare, sha = true) {
+  if (!cypher || !compare) return cypher;
+  
+  try {
+    const hashed = await oneWayEncrypt(compare, sha);
+    return cypher === hashed;
+  } catch (error) {
+    console.error('One-way comparison error:', error.message);
+    return false;
+  }
+}
+
+/**
+ * Two-way encryption using AES-GCM with PBKDF2 key derivation
+ * @param {string|object} data - Data to encrypt (will be stringified if object)
+ * @param {string} passphrase - Passphrase for encryption
+ * @returns {Promise<string|null>} Hex-encoded encrypted data or null on error
+ * Format: [salt(32 hex)][iv(24 hex)][authTag(32 hex)][ciphertext(hex)]
+ */
+async function twoWayEncrypt(data, passphrase) {
   if (!data || !passphrase) return null;
 
-  data = objToString(data);
-  const salt = CryptoJS.lib.WordArray.random(SALT_SIZE);
-  const key = CryptoJS.PBKDF2(passphrase, salt, { keySize: KEY_SIZE, iterations });
-  const iv = CryptoJS.lib.WordArray.random(IV_SIZE);
-  const encrypted = CryptoJS.AES.encrypt(data, key, {
-    iv: iv,
-    padding: CryptoJS.pad.Pkcs7,
-    mode: CryptoJS.mode.CBC
-  });
-  return salt.toString() + iv.toString() + encrypted.toString();
-};
+  try {
+    const crypto = getCrypto();
+    
+    // Convert data to string if needed
+    const plaintext = objToString(data);
+    const plaintextBuffer = stringToArrayBuffer(plaintext);
+    
+    // Generate random salt and IV
+    const salt = generateRandomBytes(SALT_SIZE);
+    const iv = generateRandomBytes(IV_SIZE);
+    
+    // Derive encryption key from passphrase
+    const key = await deriveKey(passphrase, salt, PBKDF2_ITERATIONS);
+    
+    // Encrypt using AES-GCM (includes authentication tag)
+    const algorithm = {
+      name: 'AES-GCM',
+      iv: iv,
+      tagLength: 128  // 16 bytes authentication tag
+    };
+    
+    const encryptedBuffer = await crypto.subtle.encrypt(algorithm, key, plaintextBuffer);
+    
+    // Extract ciphertext and auth tag
+    // In AES-GCM, the tag is appended to the ciphertext
+    const encrypted = new Uint8Array(encryptedBuffer);
+    const ciphertext = encrypted.slice(0, -16); // Everything except last 16 bytes
+    const authTag = encrypted.slice(-16);       // Last 16 bytes
+    
+    // Format: salt + iv + authTag + ciphertext (all in hex)
+    const saltHex = arrayBufferToHex(salt);
+    const ivHex = arrayBufferToHex(iv);
+    const authTagHex = arrayBufferToHex(authTag);
+    const ciphertextHex = arrayBufferToHex(ciphertext);
+    
+    return saltHex + ivHex + authTagHex + ciphertextHex;
+  } catch (error) {
+    console.error('Two-way encryption error:', error.message);
+    return null;
+  }
+}
 
-const twoWayDecryption = function(cypher, passphrase) {
+/**
+ * Two-way decryption using AES-GCM with PBKDF2 key derivation
+ * @param {string} cypher - Hex-encoded encrypted data
+ * @param {string} passphrase - Passphrase for decryption
+ * @returns {Promise<string|null>} Decrypted data or null on error
+ */
+async function twoWayDecrypt(cypher, passphrase) {
   if (!cypher || !passphrase) return null;
 
   try {
-    const salt = CryptoJS.enc.Hex.parse(cypher.substr(0, length));
-    const iv = CryptoJS.enc.Hex.parse(cypher.substr(length, length));
-    const encrypted = cypher.substring(length * 2);
-    const key = CryptoJS.PBKDF2(passphrase, salt, { keySize: KEY_SIZE, iterations });
-    const decrypted = CryptoJS.AES.decrypt(encrypted, key, {
+    const crypto = getCrypto();
+    
+    // Parse format: salt(32 hex) + iv(24 hex) + authTag(32 hex) + ciphertext
+    const saltHex = cypher.substring(0, 32);          // 16 bytes = 32 hex chars
+    const ivHex = cypher.substring(32, 56);           // 12 bytes = 24 hex chars
+    const authTagHex = cypher.substring(56, 88);      // 16 bytes = 32 hex chars
+    const ciphertextHex = cypher.substring(88);       // Rest is ciphertext
+    
+    // Convert from hex to ArrayBuffer
+    const salt = hexToArrayBuffer(saltHex);
+    const iv = hexToArrayBuffer(ivHex);
+    const authTag = hexToArrayBuffer(authTagHex);
+    const ciphertext = hexToArrayBuffer(ciphertextHex);
+    
+    // Derive decryption key from passphrase
+    const key = await deriveKey(passphrase, new Uint8Array(salt), PBKDF2_ITERATIONS);
+    
+    // Combine ciphertext + authTag for AES-GCM decryption
+    const encrypted = new Uint8Array(ciphertext.byteLength + authTag.byteLength);
+    encrypted.set(new Uint8Array(ciphertext), 0);
+    encrypted.set(new Uint8Array(authTag), ciphertext.byteLength);
+    
+    // Decrypt using AES-GCM
+    const algorithm = {
+      name: 'AES-GCM',
       iv: iv,
-      padding: CryptoJS.pad.Pkcs7,
-      mode: CryptoJS.mode.CBC
-    }).toString(CryptoJS.enc.Utf8);
-
-    if (!decrypted) throw new Error("Decryption failed: Invalid passphrase or corrupted data.");
-
-    if (
-      decrypted.charAt(0) === '"' &&
-      decrypted.charAt(decrypted.length - 1) === '"'
-    ) {
-      decrypted = decrypted.substr(1, decrypted.length - 2);
+      tagLength: 128
+    };
+    
+    const decryptedBuffer = await crypto.subtle.decrypt(algorithm, key, encrypted);
+    const decrypted = arrayBufferToString(decryptedBuffer);
+    
+    if (!decrypted) {
+      throw new Error('Decryption failed: Invalid passphrase or corrupted data.');
     }
-    return decrypted
+    
+    return decrypted;
   } catch (error) {
-    console.error(error.message);
+    console.error('Two-way decryption error:', error.message);
     return null;
   }
-};
+}
 
-const oneWayEncrypt = oneWayEncryption;
-const oneWayCompare = oneWayComparation;
-const twoWayEncrypt = twoWayEncryption;
-const twoWayDecrypt = twoWayDecryption;
-export { oneWayEncrypt, oneWayCompare, twoWayEncrypt, twoWayDecrypt };
+// Export with both old and new names for compatibility
+export {
+  oneWayEncrypt,
+  oneWayCompare as oneWayComparation, // Keep old typo for backward compatibility
+  oneWayCompare,
+  twoWayEncrypt,
+  twoWayDecrypt
+};

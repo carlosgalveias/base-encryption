@@ -1,20 +1,8 @@
 const path = require("path");
-const webpack = require('webpack');
 const WebpackObfuscator = require('webpack-obfuscator');
 
 module.exports = {
-  resolve: {
-    fallback: {
-      crypto: require.resolve("crypto-browserify"),
-      buffer: require.resolve("buffer/"),
-      stream: require.resolve("stream-browserify")
-    }
-  },
   plugins: [
-    new webpack.BannerPlugin({
-      banner: `try {global.crypto = require('crypto')} catch (e) {}\n`,
-      raw: true, // This ensures the text is inserted as-is without comment wrapping
-    }),
     new WebpackObfuscator({
       rotateStringArray: true
     }),
@@ -23,7 +11,7 @@ module.exports = {
   output: {
     path: path.resolve(__dirname),
     filename: "index.js",
-    library: "BaseEncryption",
+    library: "CommonEncryption",
     libraryTarget: "umd",
     globalObject: "this"
   },

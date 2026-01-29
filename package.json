@@ -1,8 +1,9 @@
 {
   "name": "common-encryption",
-  "version": "2.0.5",
-  "description": "A npm module with encryption/decryption data with support both for node and for browser",
+  "version": "3.0.0",
+  "description": "A npm module with encryption/decryption data using Native Web Crypto API with support both for node and for browser",
   "main": "index.js",
+  "type": "module",
   "scripts": {
     "test": "node ./node_modules/mocha/bin/mocha test --timeout 30000 --recursive --exit",
     "build": "webpack"
@@ -13,11 +14,11 @@
     "type": "git",
     "url": "git+https://github.com/carlosgalveias/base-encryption"
   },
+  "engines": {
+    "node": ">=18.0.0"
+  },
   "dependencies": {
-    "buffer": "^6.0.3",
-    "crypto-browserify": "^3.12.1",
-    "crypto-js": "^4.2.0",
-    "stream-browserify": "^3.0.0"
+    "crypto-js": "^4.2.0"
   },
   "devDependencies": {
     "javascript-obfuscator": "^5.2.1",
