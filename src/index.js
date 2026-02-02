@@ -10,10 +10,18 @@ import {
 } from './crypto-utils.js';
 
 // Modern security constants
-const PBKDF2_ITERATIONS = 600000; // Updated from 100 to modern standard
+const PBKDF2_ITERATIONS = 600000; // Updated from 100 to modern standard (MAXIMUM for backward compatibility)
 const SALT_SIZE = 16; // bytes
 const IV_SIZE = 12;   // bytes for AES-GCM (not 16 for CBC)
 const KEY_SIZE = 256; // bits
+
+// Security level presets
+const SECURITY_LEVELS = {
+  maximum: 600000,    // OWASP 2023 compliant - for user passwords
+  high: 100000,       // Strong security - for sensitive data
+  standard: 10000,    // Balanced - for general use
+  fast: 1000          // Fast API operations - for transport encryption
+};
 
 // HELPERS
 function isObject(obj) {
@@ -66,14 +74,24 @@ async function oneWayCompare(cypher, compare, sha = true) {
  * Two-way encryption using AES-GCM with PBKDF2 key derivation
  * @param {string|object} data - Data to encrypt (will be stringified if object)
  * @param {string} passphrase - Passphrase for encryption
+ * @param {object} options - Optional configuration
+ * @param {number} options.iterations - Custom PBKDF2 iteration count
+ * @param {string} options.securityLevel - Preset security level ('maximum', 'high', 'standard', 'fast')
  * @returns {Promise<string|null>} Hex-encoded encrypted data or null on error
  * Format: [salt(32 hex)][iv(24 hex)][authTag(32 hex)][ciphertext(hex)]
  */
-async function twoWayEncrypt(data, passphrase) {
+async function twoWayEncrypt(data, passphrase, options = {}) {
   if (!data || !passphrase) return null;
 
   try {
     const crypto = getCrypto();
+    
+    // Determine iteration count from options
+    const iterations = typeof options.iterations === 'number'
+      ? options.iterations
+      : (options.securityLevel && SECURITY_LEVELS[options.securityLevel])
+      ? SECURITY_LEVELS[options.securityLevel]
+      : PBKDF2_ITERATIONS; // Default to maximum for backward compatibility
     
     // Convert data to string if needed
     const plaintext = objToString(data);
@@ -84,7 +102,7 @@ async function twoWayEncrypt(data, passphrase) {
     const iv = generateRandomBytes(IV_SIZE);
     
     // Derive encryption key from passphrase
-    const key = await deriveKey(passphrase, salt, PBKDF2_ITERATIONS);
+    const key = await deriveKey(passphrase, salt, iterations);
     
     // Encrypt using AES-GCM (includes authentication tag)
     const algorithm = {
@@ -118,13 +136,23 @@ async function twoWayEncrypt(data, passphrase) {
  * Two-way decryption using AES-GCM with PBKDF2 key derivation
  * @param {string} cypher - Hex-encoded encrypted data
  * @param {string} passphrase - Passphrase for decryption
+ * @param {object} options - Optional configuration
+ * @param {number} options.iterations - Custom PBKDF2 iteration count
+ * @param {string} options.securityLevel - Preset security level ('maximum', 'high', 'standard', 'fast')
  * @returns {Promise<string|null>} Decrypted data or null on error
  */
-async function twoWayDecrypt(cypher, passphrase) {
+async function twoWayDecrypt(cypher, passphrase, options = {}) {
   if (!cypher || !passphrase) return null;
 
   try {
     const crypto = getCrypto();
+    
+    // Determine iteration count from options
+    const iterations = typeof options.iterations === 'number'
+      ? options.iterations
+      : (options.securityLevel && SECURITY_LEVELS[options.securityLevel])
+      ? SECURITY_LEVELS[options.securityLevel]
+      : PBKDF2_ITERATIONS; // Default to maximum for backward compatibility
     
     // Parse format: salt(32 hex) + iv(24 hex) + authTag(32 hex) + ciphertext
     const saltHex = cypher.substring(0, 32);          // 16 bytes = 32 hex chars
@@ -139,7 +167,7 @@ async function twoWayDecrypt(cypher, passphrase) {
     const ciphertext = hexToArrayBuffer(ciphertextHex);
     
     // Derive decryption key from passphrase
-    const key = await deriveKey(passphrase, new Uint8Array(salt), PBKDF2_ITERATIONS);
+    const key = await deriveKey(passphrase, new Uint8Array(salt), iterations);
     
     // Combine ciphertext + authTag for AES-GCM decryption
     const encrypted = new Uint8Array(ciphertext.byteLength + authTag.byteLength);
@@ -173,5 +201,6 @@ export {
   oneWayCompare as oneWayComparation, // Keep old typo for backward compatibility
   oneWayCompare,
   twoWayEncrypt,
-  twoWayDecrypt
+  twoWayDecrypt,
+  SECURITY_LEVELS
 };
