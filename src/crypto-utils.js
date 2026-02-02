@@ -22,14 +22,23 @@ import { webcrypto } from 'crypto'; // Node.js Web Crypto API
  * @throws {Error} If Web Crypto API is not available
  */
 export function getCrypto() {
-  // Browser environment
+  // 1. Browser check
   if (typeof window !== 'undefined' && window.crypto) {
     return window.crypto;
   }
   
-  // Node.js environment (18+) - use imported webcrypto
-  if (webcrypto) {
-    return webcrypto;
+  // 2. Node.js check (Global check for Node 18+)
+  if (typeof globalThis !== 'undefined' && globalThis.crypto) {
+    return globalThis.crypto;
+  }
+
+  // 3. Fallback for specific Node environments
+  try {
+    // We use a dynamic approach to avoid Webpack's static 'crypto: false'
+    const nodeCrypto = webcrypto; 
+    if (nodeCrypto) return nodeCrypto;
+  } catch (e) {
+    // Fallback failed
   }
   
   throw new Error('Web Crypto API not available in this environment');

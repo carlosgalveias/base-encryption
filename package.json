@@ -1,9 +1,19 @@
 {
   "name": "common-encryption",
-  "version": "3.1.0",
+  "version": "3.1.1",
   "description": "A npm module with encryption/decryption data using Native Web Crypto API with support both for node and for browser",
-  "main": "index.js",
   "type": "module",
+  "main": "./dist/index.cjs",
+  "module": "./dist/index.js",
+  "exports": {
+    ".": {
+      "import": "./dist/index.js",
+      "require": "./dist/index.cjs"
+    }
+  },
+  "files": [
+    "dist"
+  ],
   "scripts": {
     "test": "node ./node_modules/mocha/bin/mocha test --timeout 30000 --recursive --exit",
     "build": "webpack"

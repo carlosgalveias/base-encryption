@@ -92,7 +92,7 @@ const encrypted = await commonEncryption.twoWayEncrypt('secret', 'password');
 
 ### Step 1: Update Package
 ```bash
-npm install common-encryption@^3.0.0
+npm install common-encryption@^3.1.1
 ```
 
 ### Step 2: Update All Function Calls
@@ -121,7 +121,7 @@ v3.0 cannot decrypt v2.x encrypted data. You must:
 ```javascript
 // One-time migration script
 import v2 from 'common-encryption@2.0.5';
-import commonEncryption from 'common-encryption@3.0.0';
+import commonEncryption from 'common-encryption@3.1.1';
 
 async function migrateData(oldEncryptedData, password) {
   // Decrypt with v2
@@ -313,12 +313,12 @@ const commonEncryption = require('common-encryption');
 
 **Browser (ES6 modules):**
 ```javascript
-import commonEncryption from './node_modules/common-encryption/index.js';
+import commonEncryption from './node_modules/common-encryption/dist/index.js';
 ```
 
 **Browser (script tag):**
 ```html
-<script src="node_modules/common-encryption/index.js"></script>
+<script src="node_modules/common-encryption/dist/index.js"></script>
 <script>
   // Library is available as commonEncryption
 </script>
